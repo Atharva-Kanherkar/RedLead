@@ -51,3 +51,5 @@ export const gateKeeper: RequestHandler = async (req: any, res, next) => {
         next(error);
     }
 };
+
+console.log("Hello")
