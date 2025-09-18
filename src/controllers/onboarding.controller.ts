@@ -14,14 +14,18 @@ const prisma = new PrismaClient();
 // This function can remain public as it's the first step of the onboarding
 // process and does not interact with user-specific data.
 export const analyzeWebsite: RequestHandler = async (req, res, next) => {
+    console.log('[ANALYZE] Starting website analysis...');
     const { websiteUrl } = req.body;
+    console.log('[ANALYZE] Website URL:', websiteUrl);
 
     if (!websiteUrl) {
+        console.log('[ANALYZE] ERROR: Website URL is required');
          res.status(400).json({ message: 'Website URL is required.' });
          return;
     }
 
     try {
+        console.log('[ANALYZE] Starting scraping process...');
         let scrapedText = '';
         // First, try a simple scrape.
         scrapedText = await scrapeWebsiteTextSimple(websiteUrl);
@@ -32,11 +36,13 @@ export const analyzeWebsite: RequestHandler = async (req, res, next) => {
         }
 
         // Generate keywords and description in parallel for efficiency.
+        console.log('[ANALYZE] Generating keywords and description...');
         const [keywords, description] = await Promise.all([
             generateKeywords(scrapedText),
             generateDescription(scrapedText)
         ]);
-
+        
+        console.log('[ANALYZE] Successfully generated analysis results');
         res.status(200).json({
             websiteUrl,
             generatedKeywords: keywords,
@@ -45,6 +51,7 @@ export const analyzeWebsite: RequestHandler = async (req, res, next) => {
         return;
 
     } catch (error) {
+        console.error('[ANALYZE] ERROR occurred:', error);
         // Pass any errors to the global error handler.
         next(error);
     }

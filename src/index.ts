@@ -68,10 +68,22 @@ app.use('/api/analytics', analyticsRouter); // Add this line
 
 
 app.use((err: any, req: any, res: any, next: any) => {
-  console.error(err.stack);
-  res.status(401).json({ 
-    error: 'Unauthenticated!',
-    message: err.message 
+  console.error('[ERROR] Global error handler caught:', err.stack);
+  
+  // Check if it's a Clerk authentication error
+  if (err.name === 'ClerkAPIResponseError' || err.message?.includes('authentication')) {
+    res.status(401).json({ 
+      error: 'Unauthenticated!',
+      message: err.message 
+    });
+    return;
+  }
+  
+  // For other errors, return appropriate status codes
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({ 
+    error: statusCode === 500 ? 'Internal Server Error' : 'Request Failed',
+    message: err.message || 'An unexpected error occurred'
   });
 });
 
