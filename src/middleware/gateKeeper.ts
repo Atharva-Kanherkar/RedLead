@@ -45,7 +45,7 @@ export const gateKeeper: RequestHandler = async (req: any, res, next) => {
                 message: 'Forbidden: This feature requires a Pro subscription.',
                 upgradeUrl: '/billing'
             });return;
-        }
+        }//
     } catch (error) {
         console.error('❌ [ERROR] GateKeeper crashed:', error);
         next(error);
