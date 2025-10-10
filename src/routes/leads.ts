@@ -2,6 +2,7 @@ import express from 'express';
 import { deleteAllLeads, deleteLeadsByStatus, deleteSingleLead, getLeadsForCampaign, runManualDiscovery, runTargetedDiscovery, updateLeadStatus } from '../controllers/lead.controller';
 import { summarizeLead } from '../controllers/post.controller';
 import { gateKeeper } from '../middleware/gateKeeper';
+import { requireRedditConnection } from '../middleware/requireReddit';
 import { validate, campaignIdParamSchema, leadIdParamSchema, updateLeadStatusSchema, idSchema } from '../middleware/validator';
 import { aiLimiter } from '../middleware/rateLimiter';
 
@@ -16,17 +17,21 @@ leadRouter.get(
 );
 
 // Manually trigger a new search for a campaign (Pro feature)
+// REQUIRES Reddit connection - uses user's Reddit account
 leadRouter.post(
   '/discover/manual/:campaignId',
   gateKeeper,
+  requireRedditConnection, // CRITICAL: Ensure Reddit is connected
   validate(campaignIdParamSchema, 'params'),
   runManualDiscovery
 );
 
 // Targeted discovery
+// REQUIRES Reddit connection - uses user's Reddit account
 leadRouter.post(
   '/campaign/:campaignId/discover/targeted',
   gateKeeper,
+  requireRedditConnection, // CRITICAL: Ensure Reddit is connected
   validate(campaignIdParamSchema, 'params'),
   runTargetedDiscovery
 );

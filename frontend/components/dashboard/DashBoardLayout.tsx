@@ -137,6 +137,7 @@ export const DashboardLayout = () => {
     setIsRunningDiscovery(true);
     try {
       const token = await getToken();
+      // Check if error is for Reddit connection
       await api.runManualDiscovery(activeCampaign, token);
       setTimeout(() => fetchLeads(activeCampaign), 2000);
     } catch (err: any) {

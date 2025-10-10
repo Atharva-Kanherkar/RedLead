@@ -1,15 +1,12 @@
 import { RequestHandler } from 'express';
-// Removed: import { PrismaClient } from '@prisma/client';
 import { findLeadsGlobally, findLeadsOnReddit } from '../services/reddit.service';
 import { enrichLeadsForUser } from '../services/enrichment.service';
 import { summarizeTextContent } from '../services/summarisation.service';
 import { calculateContentRelevance } from '../services/relevance.service';
 import { AIUsageService } from '../services/aitracking.service';
-// Import the email notification service
 import { sendNewLeadsNotification } from '../services/email.service';
-
-
 import { prisma } from '../lib/prisma';
+import { log } from '../lib/logger';
 
 export const runManualDiscovery: RequestHandler = async (req: any, res, next) => {
     // Get the authenticated user's ID from Clerk
@@ -52,11 +49,27 @@ export const runManualDiscovery: RequestHandler = async (req: any, res, next) =>
         }
         
         
-        console.log(`[Manual Discovery] Running GLOBAL search for campaign ${campaign.id}...`);
+        // CRITICAL: Check if user has connected Reddit
+        if (!user.redditRefreshToken) {
+            res.status(403).json({
+                error: 'Reddit account not connected',
+                message: 'You must connect your Reddit account to discover leads.',
+                action: 'connect_reddit'
+            });
+            return;
+        }
+
+        log.info('Running global search with user Reddit account', {
+            userId,
+            campaignId,
+            username: user.redditUsername
+        });
+
         const rawLeads = await findLeadsGlobally(
             campaign.generatedKeywords,
             campaign.negativeKeywords || [],
-            campaign.subredditBlacklist || []
+            campaign.subredditBlacklist || [],
+            user.redditRefreshToken // Use USER's Reddit account
         );
         
         console.log(`[Manual Discovery] Found ${rawLeads.length} unique raw leads.`);
@@ -160,12 +173,28 @@ export const runTargetedDiscovery: RequestHandler = async (req: any, res, next) 
             return;
         }
         
-        console.log(`[Targeted Discovery] Running TARGETED search in ${campaign.targetSubreddits.length} subreddits...`);
-        
-        // Use the targeted findLeadsOnReddit function
+        // CRITICAL: Check if user has connected Reddit
+        if (!user.redditRefreshToken) {
+            res.status(403).json({
+                error: 'Reddit account not connected',
+                message: 'You must connect your Reddit account to discover leads.',
+                action: 'connect_reddit'
+            });
+            return;
+        }
+
+        log.info('Running targeted search with user Reddit account', {
+            userId,
+            campaignId,
+            username: user.redditUsername,
+            subredditCount: campaign.targetSubreddits.length
+        });
+
+        // Use the targeted findLeadsOnReddit function with USER's account
         const rawLeads = await findLeadsOnReddit(
             campaign.generatedKeywords,
-            campaign.targetSubreddits
+            campaign.targetSubreddits,
+            user.redditRefreshToken // Use USER's Reddit account
         );
         
         console.log(`[Targeted Discovery] Found ${rawLeads.length} unique targeted leads.`);

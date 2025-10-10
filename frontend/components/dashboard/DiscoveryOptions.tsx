@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 import { Inter, Poppins } from 'next/font/google';
 import { toast } from 'sonner';
+import { RedditConnectionAlert } from './RedditConnectionAlert';
+import { useRouter } from 'next/navigation';
 
 const inter = Inter({ subsets: ['latin'] });
 const poppins = Poppins({
@@ -28,10 +30,23 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
   lastDiscoveryAt
 }) => {
   const { getToken } = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
   const [isRunningGlobal, setIsRunningGlobal] = useState(false);
   const [isRunningTargeted, setIsRunningTargeted] = useState(false);
 
+  // Check if user has connected Reddit
+  const hasConnectedReddit = user?.publicMetadata?.hasConnectedReddit as boolean || false;
+
   const handleGlobalDiscovery = async () => {
+    if (!hasConnectedReddit) {
+      toast.error('Reddit Connection Required', {
+        description: 'Please connect your Reddit account first'
+      });
+      router.push('/connect-reddit');
+      return;
+    }
+
     try {
       setIsRunningGlobal(true);
       const token = await getToken();
@@ -44,15 +59,32 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
       onLeadsDiscovered();
     } catch (error: any) {
       console.error('Global discovery failed:', error);
-      toast.error('Global discovery failed', {
-        description: error.message || 'Please try again later'
-      });
+
+      // Check if error is due to Reddit not being connected
+      if (error.message?.includes('Reddit account not connected')) {
+        toast.error('Reddit Connection Required', {
+          description: 'Please connect your Reddit account to discover leads'
+        });
+        router.push('/connect-reddit');
+      } else {
+        toast.error('Global discovery failed', {
+          description: error.message || 'Please try again later'
+        });
+      }
     } finally {
       setIsRunningGlobal(false);
     }
   };
 
   const handleTargetedDiscovery = async () => {
+    if (!hasConnectedReddit) {
+      toast.error('Reddit Connection Required', {
+        description: 'Please connect your Reddit account first'
+      });
+      router.push('/connect-reddit');
+      return;
+    }
+
     try {
       setIsRunningTargeted(true);
       const token = await getToken();
@@ -66,7 +98,12 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
     } catch (error: any) {
       console.error('Targeted discovery failed:', error);
 
-      if (error.message?.includes('No target subreddits')) {
+      if (error.message?.includes('Reddit account not connected')) {
+        toast.error('Reddit Connection Required', {
+          description: 'Please connect your Reddit account to discover leads'
+        });
+        router.push('/connect-reddit');
+      } else if (error.message?.includes('No target subreddits')) {
         toast.error('No target subreddits configured', {
           description: 'Please add target subreddits to your campaign first'
         });
@@ -82,6 +119,15 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
 
   const isAnyRunning = isRunningGlobal || isRunningTargeted;
   const hasTargetSubreddits = targetSubreddits && targetSubreddits.length > 0;
+
+  // Show Reddit connection alert if not connected
+  if (!hasConnectedReddit) {
+    return (
+      <div className="space-y-6">
+        <RedditConnectionAlert message="Connect your Reddit account to start discovering leads. All lead discovery uses YOUR Reddit account to ensure compliance and proper attribution." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

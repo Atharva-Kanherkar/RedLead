@@ -109,7 +109,9 @@ export const runLeadDiscoveryWorker = async (): Promise<void> => {
             where: {
                 isActive: true,
                 user: {
-                    subscriptionStatus: { in: ['active', 'trialing'] }
+                    subscriptionStatus: { in: ['active', 'trialing'] },
+                    hasConnectedReddit: true, // CRITICAL: Only process users with Reddit connected
+                    redditRefreshToken: { not: null }
                 }
             },
             include: { user: true },
@@ -140,16 +142,22 @@ export const runLeadDiscoveryWorker = async (): Promise<void> => {
                     }
 
                     console.log(`Processing campaign ${campaign.id} for user ${user.id}`);
-                    
+
+                    // CRITICAL: Ensure user has Reddit connected
+                    if (!user.redditRefreshToken) {
+                        console.log(`⚠️  Skipping campaign ${campaign.id} - user ${user.id} has not connected Reddit`);
+                        break;
+                    }
+
                     if (user.plan === 'pro' && campaign.competitors && campaign.competitors.length > 0) {
                         const aiUsage = AIUsageService.getInstance();
                         const canUseCompetitorAI = await aiUsage.trackAIUsage(user.id, 'competitor', user.plan);
-                        
+
                         if (canUseCompetitorAI) {
-                            console.log(`[Worker] Running TARGETED competitor search for campaign ${campaign.id}...`);
+                            console.log(`[Worker] Running TARGETED competitor search for campaign ${campaign.id} using user's Reddit account...`);
                             const [submissionLeads, commentLeads] = await Promise.all([
-                                findLeadsInSubmissions(campaign.competitors, campaign.targetSubreddits),
-                                findLeadsInComments(campaign.competitors, campaign.targetSubreddits)
+                                findLeadsInSubmissions(campaign.competitors, campaign.targetSubreddits, user.redditRefreshToken),
+                                findLeadsInComments(campaign.competitors, campaign.targetSubreddits, user.redditRefreshToken)
                             ]);
 
                             const competitorLeads = [...submissionLeads, ...commentLeads];

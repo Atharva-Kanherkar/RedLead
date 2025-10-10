@@ -37,10 +37,13 @@ export const getAppAuthenticatedInstance = async (): Promise<snoowrap> => {
     }
 };
 
-export const findLeadsInSubmissions = async (keywords: string[], subreddits: string[]): Promise<RawLead[]> => {
+export const findLeadsInSubmissions = async (keywords: string[], subreddits: string[], userRefreshToken: string): Promise<RawLead[]> => {
     try {
-        const reddit = await getAppAuthenticatedInstance();
-        console.log(`[Submissions] Starting search in ${subreddits.length} subreddits.`);
+        const reddit = getUserAuthenticatedInstance(userRefreshToken);
+        log.info('Starting submission search', {
+            subredditCount: subreddits.length,
+            keywordCount: keywords.length
+        });
 
         const searchQuery = keywords.join(' OR ');
         const searchPromises = subreddits.map(async (subreddit) => {
@@ -77,10 +80,13 @@ export const findLeadsInSubmissions = async (keywords: string[], subreddits: str
     }
 };
 
-export const findLeadsInComments = async (keywords: string[], subreddits: string[]): Promise<RawLead[]> => {
+export const findLeadsInComments = async (keywords: string[], subreddits: string[], userRefreshToken: string): Promise<RawLead[]> => {
     try {
-        const reddit = await getAppAuthenticatedInstance();
-        console.log(`[Comments] Starting search in ${subreddits.length} subreddits.`);
+        const reddit = getUserAuthenticatedInstance(userRefreshToken);
+        log.info('Starting comment search', {
+            subredditCount: subreddits.length,
+            keywordCount: keywords.length
+        });
         const lowerCaseKeywords = keywords.map(k => k.toLowerCase());
         const limiter = pLimit(5);
         let leads: RawLead[] = [];
@@ -126,11 +132,15 @@ export const findLeadsGlobally = async (
     keywords: string[],
     negativeKeywords: string[],
     subredditBlacklist: string[],
+    userRefreshToken: string,
     businessDescription?: string
 ): Promise<RawLead[]> => {
     try {
-        const reddit = await getAppAuthenticatedInstance();
-        console.log(`[Global Search] Starting comprehensive Reddit search.`);
+        const reddit = getUserAuthenticatedInstance(userRefreshToken);
+        log.info('Starting global Reddit search', {
+            keywordCount: keywords.length,
+            negativeKeywords: negativeKeywords.length
+        });
 
         // 🎯 IMPROVED: Cast a wider net with multiple search strategies
         const primaryKeywords = keywords.slice(0, 5); // Increased from 3 to 5
@@ -222,10 +232,13 @@ export const findLeadsGlobally = async (
     }
 };
 
-export const findLeadsOnReddit = async (keywords: string[], subreddits: string[]): Promise<RawLead[]> => {
+export const findLeadsOnReddit = async (keywords: string[], subreddits: string[], userRefreshToken: string): Promise<RawLead[]> => {
     try {
-        const reddit = await getAppAuthenticatedInstance();
-        console.log(`Starting Reddit search for ${subreddits.length} subreddits.`);
+        const reddit = getUserAuthenticatedInstance(userRefreshToken);
+        log.info('Starting Reddit search', {
+            subredditCount: subreddits.length,
+            keywordCount: keywords.length
+        });
 
         const searchQuery = keywords.join(' OR ');
         console.log(`  -> Using search query: "${searchQuery}"`);
