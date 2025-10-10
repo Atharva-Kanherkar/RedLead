@@ -35,6 +35,8 @@ export const OnboardingFlow = () => {
     setError(null);
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      console.log('🔍 DEBUG - Using API URL:', API_URL);
+      console.log('🔍 DEBUG - Full endpoint:', `${API_URL}/api/onboarding/analyze`);
       const response = await fetch(`${API_URL}/api/onboarding/analyze`, {
         method: 'POST',
         headers: {
