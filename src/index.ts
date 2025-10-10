@@ -8,9 +8,7 @@ import engagementRouter from './routes/engagement';
 import insightRouter from './routes/insights';
 import performanceRouter from './routes/performance';
 import { clerkMiddleware } from '@clerk/express';
-
-
-
+import { generalLimiter } from './middleware/rateLimiter';
 
 // --- NEW: Import campaigns router ---
 import campaignRouter from './routes/campaign';
@@ -39,12 +37,20 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Body parser - MUST come before routes
+app.use(express.json({ limit: '10mb' }));
+
+// Trust proxy - important for rate limiting behind reverse proxies (Render, Heroku, etc.)
+app.set('trust proxy', 1);
+
+// Apply general rate limiting to all routes
+app.use(generalLimiter);
+
+// Webhooks should NOT have Clerk auth (Clerk sends these)
 app.use('/api/clerk-webhooks', clerkWebhookRouter);
 
+// Apply Clerk authentication middleware to all routes after webhooks
 app.use(clerkMiddleware());
-
-
-app.use(express.json());
 
 app.get('/', (_req, res) => {
   res.send('Reddit SaaS backend is running 🚀');
@@ -67,23 +73,38 @@ app.use('/api/analytics', analyticsRouter); // Add this line
 
 
 
+// Global error handler - MUST be after all routes
 app.use((err: any, req: any, res: any, next: any) => {
-  console.error('[ERROR] Global error handler caught:', err.stack);
-  
+  // Log the error with context
+  console.error('[ERROR] Global error handler caught:');
+  console.error('  Path:', req.method, req.path);
+  console.error('  Error:', err.message);
+
+  // In development, log the full stack trace
+  if (process.env.NODE_ENV === 'development') {
+    console.error('  Stack:', err.stack);
+  }
+
   // Check if it's a Clerk authentication error
   if (err.name === 'ClerkAPIResponseError' || err.message?.includes('authentication')) {
-    res.status(401).json({ 
-      error: 'Unauthenticated!',
-      message: err.message 
+    res.status(401).json({
+      error: 'Authentication failed',
+      message: 'Please sign in to access this resource'
     });
     return;
   }
-  
-  // For other errors, return appropriate status codes
+
+  // Handle different error types
   const statusCode = err.statusCode || err.status || 500;
-  res.status(statusCode).json({ 
+
+  // Never expose internal error details in production
+  const message = process.env.NODE_ENV === 'production' && statusCode === 500
+    ? 'An unexpected error occurred'
+    : err.message || 'An unexpected error occurred';
+
+  res.status(statusCode).json({
     error: statusCode === 500 ? 'Internal Server Error' : 'Request Failed',
-    message: err.message || 'An unexpected error occurred'
+    message
   });
 });
 

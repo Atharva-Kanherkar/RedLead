@@ -1,6 +1,78 @@
+# Dependencies
 node_modules/
+/.pnp
+.pnp.js
+
+# Build outputs
 dist/
+build/
+.next/
+out/
+
+# Environment variables
 .env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Database
 /generated/prisma
+*.db
+*.db-journal
+*.sqlite
 
+# Secrets and credentials
+*.pem
+*.key
+*.cert
+*.crt
+secrets.json
+credentials.json
 
+# Temporary files
+tmp/
+temp/
+.cache/
+
+# Misc
+.turbo
+.vercel
