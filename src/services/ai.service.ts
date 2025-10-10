@@ -86,8 +86,8 @@ const aiProviders = [
         generate: async function(prompt: string, expectJson: boolean): Promise<string> {
             if (!process.env.GEMINI_API_KEY) throw new Error("Gemini API key is not set.");
             const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = client.getGenerativeModel({ 
-                model: 'gemini-1.5-flash',
+            const model = client.getGenerativeModel({
+                model: 'gemini-2.0-flash-exp',
                 generationConfig: {
                     maxOutputTokens: 1024,
                     temperature: 0.3,

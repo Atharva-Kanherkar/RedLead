@@ -42,23 +42,7 @@ export const scrapeWebsiteTextSimple = async (url: string): Promise<string> => {
 export const scrapeWebsiteTextAdvanced = async (url: string): Promise<string> => {
     let browser: Browser | null = null;
     try {
-        // Updated launch options for production environments like Render
-        const launchOptions: Parameters<typeof puppeteer.launch>[0] = {
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--single-process'
-            ]
-        };
-
-        // For production, use the pre-installed Chrome on Render
-        if (process.env.NODE_ENV === 'production') {
-            launchOptions.executablePath = '/usr/bin/google-chrome';
-        }
-
-        browser = await puppeteer.launch(launchOptions);
+        browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
         const page = await browser.newPage();
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
         const html = await page.content();

@@ -8,9 +8,9 @@ import engagementRouter from './routes/engagement';
 import insightRouter from './routes/insights';
 import performanceRouter from './routes/performance';
 import { clerkMiddleware } from '@clerk/express';
-import { generalLimiter } from './middleware/rateLimiter';
-import { prisma } from './lib/prisma';
-import { log } from './lib/logger';
+
+
+
 
 // --- NEW: Import campaigns router ---
 import campaignRouter from './routes/campaign';
@@ -24,15 +24,12 @@ import analyticsRouter from './routes/analytics';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
-// CORS Configuration - supports multiple origins via comma-separated env variable
-// In development: http://localhost:3000
-// In production: https://red-lead.vercel.app,https://www.redlead.net
-const allowedOrigins = process.env.CORS_ORIGINS
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ['http://localhost:3000']; // Default to localhost for development
-
-log.info('CORS configured', { allowedOrigins });
+const allowedOrigins = [
+  'https://red-lead.vercel.app', // Your deployed frontend
+  'http://localhost:3000',
+   'https://www.redlead.net',
+    'https://www.redlead.net'       // Your local frontend for development
+];
 
 const corsOptions = {
   origin: allowedOrigins,
@@ -42,59 +39,15 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Body parser - MUST come before routes
-app.use(express.json({ limit: '10mb' }));
-
-// Trust proxy - important for rate limiting behind reverse proxies (Render, Heroku, etc.)
-app.set('trust proxy', 1);
-
-// Apply general rate limiting to all routes
-app.use(generalLimiter);
-
-// Webhooks should NOT have Clerk auth (Clerk sends these)
 app.use('/api/clerk-webhooks', clerkWebhookRouter);
 
-// Apply Clerk authentication middleware to all routes after webhooks
 app.use(clerkMiddleware());
 
-// Health check endpoints - no auth required
+
+app.use(express.json());
+
 app.get('/', (_req, res) => {
   res.send('Reddit SaaS backend is running 🚀');
-});
-
-app.get('/health', (_req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-app.get('/ready', async (_req, res) => {
-  try {
-    // Check database connectivity
-    await prisma.$queryRaw`SELECT 1`;
-
-    res.status(200).json({
-      status: 'ready',
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: 'connected',
-        server: 'running'
-      }
-    });
-  } catch (error) {
-    res.status(503).json({
-      status: 'not ready',
-      timestamp: new Date().toISOString(),
-      checks: {
-        database: 'disconnected',
-        server: 'running'
-      },
-      error: 'Database connection failed'
-    });
-  }
 });
 
 app.use('/api/leads', leadRouter);
@@ -114,47 +67,15 @@ app.use('/api/analytics', analyticsRouter); // Add this line
 
 
 
-// Global error handler - MUST be after all routes
 app.use((err: any, req: any, res: any, next: any) => {
-  // Log the error with structured logging
-  log.error('Global error handler caught error', err, {
-    path: req.path,
-    method: req.method,
-    userId: req.auth?.userId,
-    ip: req.ip
-  });
-
-  // Check if it's a Clerk authentication error
-  if (err.name === 'ClerkAPIResponseError' || err.message?.includes('authentication')) {
-    res.status(401).json({
-      error: 'Authentication failed',
-      message: 'Please sign in to access this resource'
-    });
-    return;
-  }
-
-  // Handle different error types
-  const statusCode = err.statusCode || err.status || 500;
-
-  // Never expose internal error details in production
-  const message = process.env.NODE_ENV === 'production' && statusCode === 500
-    ? 'An unexpected error occurred'
-    : err.message || 'An unexpected error occurred';
-
-  res.status(statusCode).json({
-    error: statusCode === 500 ? 'Internal Server Error' : 'Request Failed',
-    message
+  console.error(err.stack);
+  res.status(401).json({ 
+    error: 'Unauthenticated!',
+    message: err.message 
   });
 });
 
 app.listen(PORT, () => {
-  log.info(`Server started successfully`, {
-    port: PORT,
-    environment: process.env.NODE_ENV || 'development',
-    nodeVersion: process.version
-  });
-
-  // Initialize background job scheduler
+  console.log(`Server running on http://localhost:${PORT}`);
   initializeScheduler();
-  log.info('Background job scheduler initialized');
 });

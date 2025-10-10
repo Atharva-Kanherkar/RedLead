@@ -6,43 +6,48 @@ import {
     scrapeWebsiteTextAdvanced
 } from '../services/scraper.service';
 import { generateKeywords, generateDescription, generateSubredditSuggestions } from '../services/ai.service';
-// Removed: import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { log } from '../lib/logger';
 
 const MIN_CONTENT_LENGTH = 300;
-import { prisma } from '../lib/prisma';
 
 // This function can remain public as it's the first step of the onboarding
 // process and does not interact with user-specific data.
 export const analyzeWebsite: RequestHandler = async (req, res, next) => {
-    console.log('[ANALYZE] Starting website analysis...');
     const { websiteUrl } = req.body;
-    console.log('[ANALYZE] Website URL:', websiteUrl);
 
     if (!websiteUrl) {
-        console.log('[ANALYZE] ERROR: Website URL is required');
          res.status(400).json({ message: 'Website URL is required.' });
          return;
     }
 
     try {
-        console.log('[ANALYZE] Starting scraping process...');
+        log.info('[Analyze] Starting website analysis', { websiteUrl });
+
         let scrapedText = '';
         // First, try a simple scrape.
         scrapedText = await scrapeWebsiteTextSimple(websiteUrl);
+        log.debug('[Analyze] Simple scrape result', { length: scrapedText.length });
 
         // If the content is too short, fall back to the advanced scraper.
         if (scrapedText.length < MIN_CONTENT_LENGTH) {
+            log.info('[Analyze] Content too short, using Puppeteer');
             scrapedText = await scrapeWebsiteTextAdvanced(websiteUrl);
+            log.debug('[Analyze] Advanced scrape result', { length: scrapedText.length });
         }
 
+        log.info('[Analyze] Generating keywords and description via AI');
         // Generate keywords and description in parallel for efficiency.
-        console.log('[ANALYZE] Generating keywords and description...');
         const [keywords, description] = await Promise.all([
             generateKeywords(scrapedText),
             generateDescription(scrapedText)
         ]);
-        
-        console.log('[ANALYZE] Successfully generated analysis results');
+
+        log.info('[Analyze] Analysis complete', {
+            keywordCount: keywords.length,
+            descriptionLength: description.length
+        });
+
         res.status(200).json({
             websiteUrl,
             generatedKeywords: keywords,
@@ -51,7 +56,7 @@ export const analyzeWebsite: RequestHandler = async (req, res, next) => {
         return;
 
     } catch (error) {
-        console.error('[ANALYZE] ERROR occurred:', error);
+        log.error('[Analyze] Analysis failed', error);
         // Pass any errors to the global error handler.
         next(error);
     }
