@@ -24,12 +24,15 @@ import analyticsRouter from './routes/analytics';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const allowedOrigins = [
-  'https://red-lead.vercel.app', // Your deployed frontend
-  'http://localhost:3000',
-   'https://www.redlead.net',
-    'https://www.redlead.net'       // Your local frontend for development
-];
+
+// CORS Configuration - supports multiple origins via comma-separated env variable
+// In development: http://localhost:3000
+// In production: https://red-lead.vercel.app,https://www.redlead.net
+const allowedOrigins = process.env.CORS_ORIGINS
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000']; // Default to localhost for development
+
+log.info('CORS configured', { allowedOrigins });
 
 const corsOptions = {
   origin: allowedOrigins,
