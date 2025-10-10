@@ -8,35 +8,35 @@ datasource db {
 }
 
 model User {
-  id                       String                    @id @default(cuid())
-  email                    String                    @unique
-  plan                     String                    @default("free")
-  subscriptionStatus       String?
-  lastKarmaCheck           DateTime?
-  redditKarma              Int?                      @default(0)
-  redditRefreshToken       String?
-  redditUsername           String?
-  createdAt                DateTime                  @default(now())
-  updatedAt                DateTime                  @updatedAt
-  hasConnectedReddit       Boolean                   @default(false)
-  redditAuthState          String?                   @unique
-  firstName                String?
-  lastName                 String?
-  subscriptionEndsAt       DateTime?
-  AIUsage                  AIUsage[]
-  campaigns                Campaign[]
+  id                      String                    @id @default(cuid())
+  email                   String                    @unique
+  firstName               String?
+  lastName                String?
+  plan                    String                    @default("free")
+  subscriptionStatus      String?
+  lastKarmaCheck          DateTime?
+  redditKarma             Int?                      @default(0)
+  redditRefreshToken      String?
+  redditUsername          String?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  redditAuthState         String?                   @unique
+  hasConnectedReddit      Boolean                   @default(false)
+  AIUsage                 AIUsage[]
+  campaigns               Campaign[]
+  leads                   Lead[]
+  MarketInsight           MarketInsight[]
+  scheduledReplies        ScheduledReply[]
+  webhooks                Webhook[]
   emailNotificationSetting EmailNotificationSetting?
-  leads                    Lead[]
-  MarketInsight            MarketInsight[]
-  scheduledReplies         ScheduledReply[]
-  webhooks                 Webhook[]
+  subscriptionEndsAt       DateTime?
 }
-
+// ✨ NEW MODEL ADDED FOR EMAIL NOTIFICATIONS ✨
 model EmailNotificationSetting {
   id      String  @id @default(cuid())
   email   String
   enabled Boolean @default(false)
-  userId  String  @unique
+  userId  String  @unique // Each user has one setting
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -59,31 +59,26 @@ model Webhook {
 }
 
 model Campaign {
-  id                      String          @id @default(cuid())
-  userId                  String
-  analyzedUrl             String
-  generatedKeywords       String[]
-  generatedDescription    String
-  targetSubreddits        String[]        @default([])
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
-  competitors             String[]        @default([])
-  name                    String          @default("Untitled Campaign")
-  isActive                Boolean         @default(true)
-  negativeKeywords        String[]        @default([])
-  subredditBlacklist      String[]        @default([])
-  lastManualDiscoveryAt   DateTime?
-  lastGlobalDiscoverAt    DateTime?
-  lastTargetedDiscoveryAt DateTime?
-  user                    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  leads                   Lead[]
-  MarketInsight           MarketInsight[]
+  id                    String          @id @default(cuid())
+  userId                String
+  analyzedUrl           String
+  generatedKeywords     String[]
+  generatedDescription  String
+  targetSubreddits      String[]        @default([])
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  competitors           String[]        @default([])
+  name                  String          @default("Untitled Campaign")
+  isActive              Boolean         @default(true)
+  negativeKeywords      String[]        @default([])
+  subredditBlacklist    String[]        @default([])
+  lastManualDiscoveryAt DateTime?
+  lastGlobalSearchAt    DateTime?
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  leads                 Lead[]
+  MarketInsight         MarketInsight[]
 
-  // Performance indexes
   @@index([userId])
-  @@index([isActive])
-  @@index([userId, isActive])
-  @@index([userId, createdAt])
 }
 
 model Lead {
@@ -112,17 +107,9 @@ model Lead {
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   scheduledReplies   ScheduledReply[]
 
-  // Performance indexes
   @@unique([id, userId])
-  @@unique([redditId, campaignId])
   @@index([userId])
   @@index([campaignId])
-  @@index([campaignId, userId])
-  @@index([campaignId, status])
-  @@index([userId, createdAt])
-  @@index([status])
-  @@index([opportunityScore])
-  @@index([discoveredAt])
 }
 
 model ScheduledReply {
@@ -143,11 +130,7 @@ model ScheduledReply {
   lead          Lead                 @relation(fields: [leadId], references: [id], onDelete: Cascade)
   user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Performance indexes
   @@index([leadId])
-  @@index([userId])
-  @@index([status])
-  @@index([postedAt])
 }
 
 model SubredditProfile {
@@ -193,7 +176,7 @@ enum ScheduledReplyStatus {
   POSTED
   FAILED
   CANCELLED
-  PENDING_MANUAL_POST
+    PENDING_MANUAL_POST
 }
 
 enum LeadType {
