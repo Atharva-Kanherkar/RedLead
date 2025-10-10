@@ -401,9 +401,8 @@ export const getSubredditPerformance: RequestHandler = async (req: any, res, nex
       const colors = ['#ff4500', '#ff6a00', '#ff8c00', '#ffa500', '#ffb347', '#ffc266', '#ffd285', '#ffe4a3', '#fff6c2', '#fffde7'];
       
       const performance = subredditStats.map((stat, index) => ({
-        name: stat.subreddit, // Remove 'r/' prefix - frontend will add it
-        //@ts-ignore
-        leads: stat._count?.id,
+        name: stat.subreddit,
+        leads: stat._count.id, // Prisma groupBy always returns _count
         color: colors[index % colors.length]
       }));
   

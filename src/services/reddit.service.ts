@@ -1,6 +1,8 @@
 import snoowrap from 'snoowrap';
 import { RawLead } from '../types/reddit.types';
+import { SnoowrapExtended } from '../types/snoowrap.types';
 import pLimit from 'p-limit';
+import { log } from '../lib/logger';
 
 let r: snoowrap | null = null;
 
@@ -11,27 +13,26 @@ export const getAppAuthenticatedInstance = async (): Promise<snoowrap> => {
         return r;
     }
 
-    console.log('Initializing and verifying Reddit application credentials...');
+    log.info('Initializing Reddit application credentials...');
     try {
         const tempR = new snoowrap({
             userAgent: process.env.REDDIT_USER_AGENT!,
             clientId: process.env.REDDIT_CLIENT_ID!,
             clientSecret: process.env.REDDIT_CLIENT_SECRET!,
             refreshToken: process.env.REDDIT_REFRESH_TOKEN!
-        });
-        //@ts-expect-error
+        }) as unknown as SnoowrapExtended;
+
         const me = await tempR.getMe();
-        console.log(`✅ Reddit credentials verified for user: u/${me.name}`);
-        
-        r = tempR;
-        return tempR;
+        log.info('Reddit credentials verified', { username: me.name });
+
+        r = tempR as unknown as snoowrap;
+        return tempR as unknown as snoowrap;
 
     } catch (error: any) {
-        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-        console.error('!!! CRITICAL ERROR: FAILED TO AUTHENTICATE WITH REDDIT !!!');
-        console.error('!!! This is likely due to an invalid REDDIT_REFRESH_TOKEN in your .env file.');
-        console.error('!!! Please check your credentials on https://www.reddit.com/prefs/apps');
-        console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        log.error('CRITICAL: Reddit authentication failed', error, {
+            message: 'Invalid REDDIT_REFRESH_TOKEN in .env file',
+            action: 'Check credentials at https://www.reddit.com/prefs/apps'
+        });
         throw new Error(`Reddit Authentication Failed: ${error.message}`);
     }
 };
@@ -91,8 +92,8 @@ export const findLeadsInComments = async (keywords: string[], subreddits: string
                     const commentBodyLower = comment.body.toLowerCase();
                     if (lowerCaseKeywords.some(keyword => commentBodyLower.includes(keyword))) {
                         const submissionId = comment.link_id.replace('t3_', '');
-                        //@ts-expect-error
-                        const submission = await reddit.getSubmission(submissionId).fetch();
+                        const redditExt = reddit as unknown as SnoowrapExtended;
+                        const submission = await redditExt.getSubmission(submissionId).fetch();
                         leads.push({
                             id: comment.id,
                             title: `Comment in: "${submission.title}"`,

@@ -1,11 +1,11 @@
 // src/controllers/reddit.controller.ts
 import { RequestHandler } from 'express';
-// Removed: import { PrismaClient } from '@prisma/client';
 import snoowrap from 'snoowrap';
 import { clerkClient } from '@clerk/express';
 import crypto from 'crypto';
-
 import { prisma } from '../lib/prisma';
+import { SnoowrapExtended } from '../types/snoowrap.types';
+import { log } from '../lib/logger';
 
 // This function now generates a secure, random state and stores it.
 export const getRedditAuthUrl: RequestHandler = async (req: any, res, next) => {
@@ -62,8 +62,8 @@ export const handleRedditCallback: RequestHandler = async (req, res, next) => {
             clientSecret: process.env.REDDIT_CLIENT_SECRET!,
             redirectUri: process.env.REDDIT_REDIRECT_URI!
         });
-        //@ts-expect-error
-        const me = await r.getMe();
+        const redditExt = r as unknown as SnoowrapExtended;
+        const me = await redditExt.getMe();
         
         // Update user with tokens and mark reddit as connected
         await prisma.user.update({

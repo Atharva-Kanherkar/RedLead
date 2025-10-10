@@ -2,11 +2,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { perplexity } from '@ai-sdk/perplexity';
 import { generateText } from 'ai';
 import OpenAI from 'openai';
-// Removed: import { PrismaClient } from '@prisma/client';
 import { AIUsageService } from './aitracking.service';
 import { getAppAuthenticatedInstance } from './reddit.service';
-
 import { prisma } from '../lib/prisma';
+import { retry } from '../lib/retry';
+import { log } from '../lib/logger';
+import { SnoowrapExtended } from '../types/snoowrap.types';
+
 const aiCache = new Map<string, any>();
 
 function safeJsonParse<T>(jsonString: string, validator: (obj: any) => obj is T): T | null {
@@ -130,26 +132,45 @@ const aiProviders = [
 
 const generateContentWithFallback = async (prompt: string, expectJson: boolean, cacheKey?: string): Promise<string> => {
     const finalCacheKey = cacheKey || `ai_response:${Buffer.from(prompt).toString('base64').slice(0, 50)}`;
-    
+
     if (aiCache.has(finalCacheKey)) {
-        console.log(`[CACHE HIT] Returning cached AI response for key: ${finalCacheKey}`);
+        log.debug('AI cache hit', { cacheKey: finalCacheKey });
         return aiCache.get(finalCacheKey);
     }
 
     let lastError: Error | null = null;
     for (const provider of aiProviders) {
         try {
-            console.log(`[AI Service] Attempting to use ${provider.name}...`);
-            const text = await provider.generate(prompt, expectJson);
+            log.info('Attempting AI provider', { provider: provider.name });
+
+            // Retry each provider with exponential backoff
+            const text = await retry(
+                () => provider.generate(prompt, expectJson),
+                {
+                    maxAttempts: 2, // Only 2 attempts per provider since we have multiple providers
+                    initialDelay: 1000,
+                    onRetry: (attempt, error) => {
+                        log.warn('AI provider retry', {
+                            provider: provider.name,
+                            attempt,
+                            error: error.message
+                        });
+                    }
+                }
+            );
+
             if (!text) throw new Error("Received an empty response from the API.");
-            console.log(`[AI Service] Successfully received response from ${provider.name}.`);
+
+            log.info('AI provider successful', { provider: provider.name });
             aiCache.set(finalCacheKey, text);
             return text;
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
-            console.error(`[AI Service] ${provider.name} failed:`, lastError.message);
+            log.error('AI provider failed', lastError, { provider: provider.name });
         }
     }
+
+    log.error('All AI providers failed', lastError || new Error('Unknown error'));
     throw new Error(`All AI services are currently unavailable. Last error: ${lastError?.message}`);
 };
 
@@ -252,15 +273,20 @@ export const generateSubredditSuggestions = async (businessDescription: string):
         }
 
         const candidateSubreddits = parsed.subreddits;
-        console.log(`[Subreddit Suggestions] AI suggested ${candidateSubreddits.length} candidates.`);
+        log.info('AI suggested subreddits', { count: candidateSubreddits.length });
 
-        const snoowrap = await getAppAuthenticatedInstance();
+        const reddit = await getAppAuthenticatedInstance();
+
+        // Verify subreddits exist by attempting to access them
         const verificationPromises = candidateSubreddits.map(async (name) => {
             try {
-                //@ts-expect-error
-                await snoowrap.getSubreddit(name).fetch();
+                // Simple check - try to access the subreddit
+                const sub = reddit.getSubreddit(name);
+                // @ts-ignore - snoowrap types are incomplete for fetch()
+                await sub.fetch();
                 return name;
             } catch (error) {
+                log.debug('Subreddit verification failed', { subreddit: name });
                 return null;
             }
         });
