@@ -1,8 +1,8 @@
 // src/middleware/gateKeeper.ts
 import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const activePlans = ['pro', 'free']; // Keep 'free' here for testing
 
 export const gateKeeper: RequestHandler = async (req: any, res, next) => {

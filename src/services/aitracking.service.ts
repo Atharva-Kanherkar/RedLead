@@ -1,6 +1,6 @@
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 const USAGE_LIMITS = {
     reply:    { free: 0, starter: 75, pro: 300 },

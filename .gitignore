@@ -27,6 +27,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Winston logs directory
+/logs
+
 # Testing
 coverage/
 .nyc_output/

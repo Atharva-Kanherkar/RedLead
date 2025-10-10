@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { getAppAuthenticatedInstance } from '../services/reddit.service';
 import snoowrap from 'snoowrap';
 import { distance } from 'fastest-levenshtein';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // --- CONFIGURATION ---
 const PENDING_REPLY_CHECK_INTERVAL_SECONDS = 60; 

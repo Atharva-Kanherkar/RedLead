@@ -9,6 +9,8 @@ import insightRouter from './routes/insights';
 import performanceRouter from './routes/performance';
 import { clerkMiddleware } from '@clerk/express';
 import { generalLimiter } from './middleware/rateLimiter';
+import { prisma } from './lib/prisma';
+import { log } from './lib/logger';
 
 // --- NEW: Import campaigns router ---
 import campaignRouter from './routes/campaign';
@@ -52,8 +54,44 @@ app.use('/api/clerk-webhooks', clerkWebhookRouter);
 // Apply Clerk authentication middleware to all routes after webhooks
 app.use(clerkMiddleware());
 
+// Health check endpoints - no auth required
 app.get('/', (_req, res) => {
   res.send('Reddit SaaS backend is running 🚀');
+});
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/ready', async (_req, res) => {
+  try {
+    // Check database connectivity
+    await prisma.$queryRaw`SELECT 1`;
+
+    res.status(200).json({
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: 'connected',
+        server: 'running'
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'not ready',
+      timestamp: new Date().toISOString(),
+      checks: {
+        database: 'disconnected',
+        server: 'running'
+      },
+      error: 'Database connection failed'
+    });
+  }
 });
 
 app.use('/api/leads', leadRouter);
@@ -75,15 +113,13 @@ app.use('/api/analytics', analyticsRouter); // Add this line
 
 // Global error handler - MUST be after all routes
 app.use((err: any, req: any, res: any, next: any) => {
-  // Log the error with context
-  console.error('[ERROR] Global error handler caught:');
-  console.error('  Path:', req.method, req.path);
-  console.error('  Error:', err.message);
-
-  // In development, log the full stack trace
-  if (process.env.NODE_ENV === 'development') {
-    console.error('  Stack:', err.stack);
-  }
+  // Log the error with structured logging
+  log.error('Global error handler caught error', err, {
+    path: req.path,
+    method: req.method,
+    userId: req.auth?.userId,
+    ip: req.ip
+  });
 
   // Check if it's a Clerk authentication error
   if (err.name === 'ClerkAPIResponseError' || err.message?.includes('authentication')) {
@@ -109,6 +145,13 @@ app.use((err: any, req: any, res: any, next: any) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  log.info(`Server started successfully`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || 'development',
+    nodeVersion: process.version
+  });
+
+  // Initialize background job scheduler
   initializeScheduler();
+  log.info('Background job scheduler initialized');
 });

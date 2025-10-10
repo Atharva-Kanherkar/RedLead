@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 // Import the new 'generateFunReplies' function alongside the existing ones
 import { generateAIReplies, refineAIReply, generateFunReplies } from './ai.service';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 /**
  * Generates reply options for a given lead.

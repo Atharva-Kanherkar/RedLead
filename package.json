@@ -40,7 +40,8 @@
     "puppeteer": "^24.10.2",
     "resend": "^4.7.0",
     "snoowrap": "^1.23.0",
-    "svix": "^1.69.0"
+    "svix": "^1.69.0",
+    "winston": "^3.18.3"
   },
   "devDependencies": {
     "@types/cheerio": "^0.22.35",

@@ -2,7 +2,7 @@ import express from 'express';
 import { deleteAllLeads, deleteLeadsByStatus, deleteSingleLead, getLeadsForCampaign, runManualDiscovery, runTargetedDiscovery, updateLeadStatus } from '../controllers/lead.controller';
 import { summarizeLead } from '../controllers/post.controller';
 import { gateKeeper } from '../middleware/gateKeeper';
-import { validate, campaignIdParamSchema, leadIdParamSchema, updateLeadStatusSchema } from '../middleware/validator';
+import { validate, campaignIdParamSchema, leadIdParamSchema, updateLeadStatusSchema, idSchema } from '../middleware/validator';
 import { aiLimiter } from '../middleware/rateLimiter';
 
 const leadRouter = express.Router();
@@ -45,7 +45,7 @@ leadRouter.post(
   '/:id/summarize',
   aiLimiter, // AI endpoints need stricter rate limiting
   gateKeeper,
-  validate({ id: leadIdParamSchema.extract('leadId') }, 'params'),
+  validate(idSchema, 'params'),
   summarizeLead
 );
 

@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 /**
  * Fetches market insights for a campaign, ensuring it belongs to the authenticated user.

@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { discoverCompetitorsInText } from '../services/ai.service';
 import pLimit from 'p-limit';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 /**
  * A background worker that analyzes recent, high-intent leads to discover

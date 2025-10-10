@@ -1,9 +1,9 @@
 // src/controllers/user.controller.ts
 import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { clerkClient } from '@clerk/express';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const deleteCurrentUser: RequestHandler = async (req: any, res, next) => {
     const { userId } = req.auth;

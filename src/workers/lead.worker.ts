@@ -9,7 +9,7 @@ import { AIUsageService } from '../services/aitracking.service';
 import { sendNewLeadsNotification } from '../services/email.service';
 
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const BATCH_SIZE = 50; // Process 50 campaigns at a time
 const MAX_RETRIES = 3;
 

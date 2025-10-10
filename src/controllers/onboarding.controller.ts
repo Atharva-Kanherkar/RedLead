@@ -6,10 +6,10 @@ import {
     scrapeWebsiteTextAdvanced
 } from '../services/scraper.service';
 import { generateKeywords, generateDescription, generateSubredditSuggestions } from '../services/ai.service';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
 const MIN_CONTENT_LENGTH = 300;
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // This function can remain public as it's the first step of the onboarding
 // process and does not interact with user-specific data.

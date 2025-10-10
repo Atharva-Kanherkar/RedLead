@@ -2,11 +2,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { perplexity } from '@ai-sdk/perplexity';
 import { generateText } from 'ai';
 import OpenAI from 'openai';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { AIUsageService } from './aitracking.service';
 import { getAppAuthenticatedInstance } from './reddit.service';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const aiCache = new Map<string, any>();
 
 function safeJsonParse<T>(jsonString: string, validator: (obj: any) => obj is T): T | null {

@@ -1,6 +1,13 @@
 // frontend/lib/api.ts
 
-const API_BASE_URL = 'https://redlead.onrender.com';
+/**
+ * API Base URL Configuration
+ * Uses environment variable with fallback to production URL
+ *
+ * In development: http://localhost:5000
+ * In production: https://redlead.onrender.com
+ */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://redlead.onrender.com';
 
 /**
  * A helper function to create standardized authentication headers.

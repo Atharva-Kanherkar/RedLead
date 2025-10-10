@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { generateReplyOptions, refineReply } from '../services/engagement.service';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+// Removed: import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export const getReplyOptions: RequestHandler = async (req: any, res, next) => {
     const { userId } = req.auth;

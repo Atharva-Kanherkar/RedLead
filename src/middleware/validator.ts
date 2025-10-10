@@ -83,6 +83,12 @@ export const leadIdParamSchema = Joi.object({
     })
 });
 
+export const idSchema = Joi.object({
+    id: Joi.string().pattern(cuidRegex).required().messages({
+        'string.pattern.base': 'Invalid ID format'
+    })
+});
+
 /**
  * Schema for updating lead status
  */

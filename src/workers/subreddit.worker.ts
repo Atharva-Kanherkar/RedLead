@@ -1,7 +1,6 @@
-import { PrismaClient, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { analyzeAndSaveSubredditProfile } from '../services/subreddit.service';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const ANALYSIS_EXPIRATION_DAYS = 7;
 
 /**

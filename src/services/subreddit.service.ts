@@ -1,8 +1,8 @@
 import snoowrap from 'snoowrap';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { generateCultureNotes } from './ai.service';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // Initialize snoowrap with credentials from environment variables
 const r = new snoowrap({

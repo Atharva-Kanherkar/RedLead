@@ -1,11 +1,11 @@
 // src/controllers/reddit.controller.ts
 import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import snoowrap from 'snoowrap';
 import { clerkClient } from '@clerk/express';
 import crypto from 'crypto';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // This function now generates a secure, random state and stores it.
 export const getRedditAuthUrl: RequestHandler = async (req: any, res, next) => {

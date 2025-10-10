@@ -1,9 +1,9 @@
 // src/controllers/clerk.webhook.controller.ts
 import { Request, RequestHandler, Response } from 'express';
 import { Webhook } from 'svix';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // This interface defines the structure of the data object within the webhook event
 interface UserWebhookEventData {

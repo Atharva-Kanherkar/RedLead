@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const getUserUsage = async (req: any, res: Response, next: NextFunction) => {
     // Get the authenticated user's ID from Clerk's middleware

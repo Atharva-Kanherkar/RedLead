@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { webhookService } from '../services/webhook.service';
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const createWebhook = async (req: any, res: Response) => {
   const { userId } = req.auth;

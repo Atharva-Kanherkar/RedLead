@@ -1,9 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+// Removed: import { PrismaClient } from '@prisma/client';
 import { checkKarmaThreshold, getUserKarma, postReplyAsUser } from '../services/reddit.service';
 import { RequestHandler } from 'express';
 import { summarizeTextContent } from '../services/summarisation.service';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 const MINIMUM_KARMA_TO_POST = 1;
 
 export const postReplyToLead: RequestHandler = async (req: any, res, next) => {
