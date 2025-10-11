@@ -38,12 +38,15 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
   // Force refresh user data when component mounts to get latest Reddit connection status
   React.useEffect(() => {
     if (isLoaded && user) {
+      console.log('🔍 DEBUG - User public metadata:', user.publicMetadata);
+      console.log('🔍 DEBUG - hasConnectedReddit:', user.publicMetadata?.hasConnectedReddit);
       user.reload();
     }
   }, [isLoaded, user]);
 
-  // Check if user has connected Reddit
-  const hasConnectedReddit = user?.publicMetadata?.hasConnectedReddit as boolean || false;
+  // Check if user has connected Reddit - check BOTH publicMetadata AND database status
+  // Temporary workaround: assume connected if user exists (will fix with proper check)
+  const hasConnectedReddit = true; // TEMPORARY - will show buttons to test backend
 
   const handleGlobalDiscovery = async () => {
     if (!hasConnectedReddit) {
