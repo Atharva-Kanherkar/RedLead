@@ -8,8 +8,7 @@ import { prisma } from '../lib/prisma';
 import { retry } from '../lib/retry';
 import { log } from '../lib/logger';
 import { SnoowrapExtended } from '../types/snoowrap.types';
-
-const aiCache = new Map<string, any>();
+import { cacheGet, cacheSet, cacheDelete } from '../lib/cache';
 
 function safeJsonParse<T>(jsonString: string, validator: (obj: any) => obj is T): T | null {
     try {
@@ -133,9 +132,11 @@ const aiProviders = [
 const generateContentWithFallback = async (prompt: string, expectJson: boolean, cacheKey?: string): Promise<string> => {
     const finalCacheKey = cacheKey || `ai_response:${Buffer.from(prompt).toString('base64').slice(0, 50)}`;
 
-    if (aiCache.has(finalCacheKey)) {
+    // Check cache (Redis or memory)
+    const cached = await cacheGet<string>(finalCacheKey);
+    if (cached) {
         log.debug('AI cache hit', { cacheKey: finalCacheKey });
-        return aiCache.get(finalCacheKey);
+        return cached;
     }
 
     let lastError: Error | null = null;
@@ -162,7 +163,10 @@ const generateContentWithFallback = async (prompt: string, expectJson: boolean, 
             if (!text) throw new Error("Received an empty response from the API.");
 
             log.info('AI provider successful', { provider: provider.name });
-            aiCache.set(finalCacheKey, text);
+
+            // Cache the response with 24 hour TTL
+            await cacheSet(finalCacheKey, text, 24 * 60 * 60);
+
             return text;
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
@@ -294,9 +298,9 @@ export const generateSubredditSuggestions = async (businessDescription: string):
         const results = await Promise.all(verificationPromises);
         const finalSubreddits = results.filter((name): name is string => name !== null);
 
-        console.log(`[Subreddit Suggestions] Verified ${finalSubreddits.length} real subreddits.`);
-        setTimeout(() => aiCache.delete(cacheKey), 24 * 60 * 60 * 1000);
-        
+        log.info('Subreddit suggestions verified', { count: finalSubreddits.length });
+        // Cache is already set with TTL in generateContentWithFallback
+
         return finalSubreddits;
     } catch (error) {
         console.error("Error in generateSubredditSuggestions:", error);
@@ -322,8 +326,7 @@ export const generateKeywords = async (websiteText: string): Promise<string[]> =
         );
         
         const keywords = parsed ? parsed.keywords : responseText.split(',').map(k => k.trim()).filter(Boolean);
-        setTimeout(() => aiCache.delete(cacheKey), 24 * 60 * 60 * 1000);
-        
+        // Cache is already set with TTL in generateContentWithFallback
         return keywords.filter(Boolean).slice(0, 15);
     } catch (error) {
         console.error("Error in generateKeywords:", error);
@@ -349,7 +352,7 @@ export const discoverCompetitorsInText = async (text: string, ownProductDescript
         );
 
         const competitorList = parsed ? parsed.competitors : [];
-        setTimeout(() => aiCache.delete(cacheKey), 24 * 60 * 60 * 1000);
+        // Cache is already set with TTL in generateContentWithFallback
         return competitorList.slice(0, 5);
     } catch (error) {
         console.error("Error in discoverCompetitorsInText:", error);
@@ -551,10 +554,5 @@ function determineBasicSentiment(title: string, body: string | null): string {
     return 'neutral';
 }
 
-// Clean up cache periodically
-setInterval(() => {
-    if (aiCache.size > 1000) {
-        console.log('[AI Service] Cleaning up cache...');
-        aiCache.clear();
-    }
-}, 60 * 60 * 1000);
+// Cache cleanup is now handled by the cache abstraction layer
+// No manual cleanup needed - TTLs handle expiration automatically
