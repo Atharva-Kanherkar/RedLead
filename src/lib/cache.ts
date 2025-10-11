@@ -1,6 +1,7 @@
 // src/lib/cache.ts
 import { getRedisClient, isRedisAvailable } from './redis';
 import { log } from './logger';
+import { trackCacheHit, trackCacheMiss } from './metrics';
 
 /**
  * Cache Abstraction Layer
@@ -87,15 +88,18 @@ export const cacheGet = async <T = any>(key: string): Promise<T | null> => {
             const stringValue = await redis.get(key);
             if (!stringValue) {
                 log.debug('Cache miss (Redis)', { key });
+                trackCacheMiss('redis');
                 return null;
             }
             log.debug('Cache hit (Redis)', { key });
+            trackCacheHit('redis');
             return JSON.parse(stringValue) as T;
         } else {
             // Use in-memory fallback
             const entry = memoryCache.get(key);
             if (!entry) {
                 log.debug('Cache miss (Memory)', { key });
+                trackCacheMiss('memory');
                 return null;
             }
 
@@ -103,10 +107,12 @@ export const cacheGet = async <T = any>(key: string): Promise<T | null> => {
             if (entry.expiresAt < Date.now()) {
                 memoryCache.delete(key);
                 log.debug('Cache expired (Memory)', { key });
+                trackCacheMiss('memory');
                 return null;
             }
 
             log.debug('Cache hit (Memory)', { key });
+            trackCacheHit('memory');
             return entry.value as T;
         }
     } catch (error) {

@@ -9,10 +9,12 @@ import insightRouter from './routes/insights';
 import performanceRouter from './routes/performance';
 import { clerkMiddleware } from '@clerk/express';
 import { generalLimiter } from './middleware/rateLimiter';
+import { metricsMiddleware } from './middleware/metricsMiddleware';
 import { prisma } from './lib/prisma';
 import { log } from './lib/logger';
 import { initializeRedis } from './lib/redis';
 import { getCacheStats } from './lib/cache';
+import { register, initializeMetrics } from './lib/metrics';
 
 // --- Routers ---
 import campaignRouter from './routes/campaign';
@@ -47,6 +49,9 @@ app.use(express.json({ limit: '10mb' }));
 
 // Trust proxy - important for rate limiting behind reverse proxies
 app.set('trust proxy', 1);
+
+// Metrics tracking - track all requests
+app.use(metricsMiddleware);
 
 // Apply general rate limiting to all routes
 app.use(generalLimiter);
@@ -99,6 +104,18 @@ app.get('/ready', async (_req, res) => {
       },
       error: 'Database connection failed'
     });
+  }
+});
+
+// Metrics endpoint for Prometheus scraping
+app.get('/metrics', async (_req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    const metrics = await register.metrics();
+    res.end(metrics);
+  } catch (error) {
+    log.error('Failed to generate metrics', error);
+    res.status(500).end('Error generating metrics');
   }
 });
 
@@ -159,6 +176,9 @@ app.listen(PORT, async () => {
     nodeVersion: process.version
   });
 
+  // Initialize Prometheus metrics
+  initializeMetrics();
+
   // Initialize Redis (optional - falls back to memory if unavailable)
   await initializeRedis();
 
@@ -168,4 +188,10 @@ app.listen(PORT, async () => {
   // Log cache status
   const cacheStats = await getCacheStats();
   log.info('Cache initialized', cacheStats);
+
+  log.info('🚀 Server ready', {
+    healthCheck: `http://localhost:${PORT}/health`,
+    readiness: `http://localhost:${PORT}/ready`,
+    metrics: `http://localhost:${PORT}/metrics`
+  });
 });

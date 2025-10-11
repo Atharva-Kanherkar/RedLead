@@ -9,6 +9,8 @@ import { retry } from '../lib/retry';
 import { log } from '../lib/logger';
 import { SnoowrapExtended } from '../types/snoowrap.types';
 import { cacheGet, cacheSet, cacheDelete } from '../lib/cache';
+import { withCircuitBreaker } from '../lib/circuitBreaker';
+import { aiRequestsTotal } from '../lib/metrics';
 
 function safeJsonParse<T>(jsonString: string, validator: (obj: any) => obj is T): T | null {
     try {
@@ -81,22 +83,29 @@ function extractRepliesManually(text: string): string[] {
     return replies;
 }
 
+// Wrap AI providers with circuit breaker
+const geminiGenerate = withCircuitBreaker('Gemini', async (prompt: string, expectJson: boolean): Promise<string> => {
+    if (!process.env.GEMINI_API_KEY) throw new Error("Gemini API key is not set.");
+    const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = client.getGenerativeModel({
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+            maxOutputTokens: 1024,
+            temperature: 0.3,
+            responseMimeType: expectJson ? "application/json" : "text/plain",
+        }
+    });
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+});
+
 const aiProviders = [
     {
         name: 'Gemini',
         generate: async function(prompt: string, expectJson: boolean): Promise<string> {
-            if (!process.env.GEMINI_API_KEY) throw new Error("Gemini API key is not set.");
-            const client = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-            const model = client.getGenerativeModel({
-                model: 'gemini-2.0-flash-exp',
-                generationConfig: {
-                    maxOutputTokens: 1024,
-                    temperature: 0.3,
-                    responseMimeType: expectJson ? "application/json" : "text/plain",
-                }
-            });
-            const result = await model.generateContent(prompt);
-            return result.response.text();
+            const result = await geminiGenerate(prompt, expectJson);
+            aiRequestsTotal.inc({ provider: 'Gemini', status: 'success' });
+            return result;
         }
     },
     {
@@ -171,6 +180,7 @@ const generateContentWithFallback = async (prompt: string, expectJson: boolean, 
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
             log.error('AI provider failed', lastError, { provider: provider.name });
+            aiRequestsTotal.inc({ provider: provider.name, status: 'failure' });
         }
     }
 
