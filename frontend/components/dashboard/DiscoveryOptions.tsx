@@ -30,10 +30,17 @@ export const DiscoveryButtons: React.FC<DiscoveryButtonsProps> = ({
   lastDiscoveryAt
 }) => {
   const { getToken } = useAuth();
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const router = useRouter();
   const [isRunningGlobal, setIsRunningGlobal] = useState(false);
   const [isRunningTargeted, setIsRunningTargeted] = useState(false);
+
+  // Force refresh user data when component mounts to get latest Reddit connection status
+  React.useEffect(() => {
+    if (isLoaded && user) {
+      user.reload();
+    }
+  }, [isLoaded, user]);
 
   // Check if user has connected Reddit
   const hasConnectedReddit = user?.publicMetadata?.hasConnectedReddit as boolean || false;

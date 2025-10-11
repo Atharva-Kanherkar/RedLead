@@ -1,0 +1,104 @@
+# DigitalOcean App Platform Configuration
+# This file defines how your app will be deployed on DigitalOcean
+
+name: redlead-backend
+region: nyc
+
+# Environment variables (set these in DigitalOcean dashboard)
+envs:
+  # DO NOT put actual values here - set them in the dashboard
+  - key: NODE_ENV
+    value: production
+    scope: RUN_TIME
+  - key: PORT
+    value: "8080"
+    scope: RUN_TIME
+  - key: DATABASE_URL
+    scope: RUN_TIME
+    type: SECRET
+  - key: CORS_ORIGINS
+    scope: RUN_TIME
+  - key: FRONTEND_URL
+    scope: RUN_TIME
+  - key: BACKEND_URL
+    scope: RUN_TIME
+  - key: GEMINI_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: REDDIT_CLIENT_ID
+    scope: RUN_TIME
+    type: SECRET
+  - key: REDDIT_CLIENT_SECRET
+    scope: RUN_TIME
+    type: SECRET
+  - key: REDDIT_USER_AGENT
+    scope: RUN_TIME
+  - key: REDDIT_REFRESH_TOKEN
+    scope: RUN_TIME
+    type: SECRET
+  - key: REDDIT_REDIRECT_URI
+    scope: RUN_TIME
+  - key: CLERK_SECRET_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: CLERK_PUBLISHABLE_KEY
+    scope: RUN_TIME
+  - key: CLERK_WEBHOOK_SECRET
+    scope: RUN_TIME
+    type: SECRET
+  - key: RESEND_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: EMAIL_FROM
+    scope: RUN_TIME
+  - key: LOG_LEVEL
+    value: info
+    scope: RUN_TIME
+  - key: PERPLEXITY_API_KEY
+    scope: RUN_TIME
+    type: SECRET
+  - key: APYHUB_TOKEN
+    scope: RUN_TIME
+    type: SECRET
+
+services:
+  - name: api
+    # GitHub source
+    github:
+      branch: main
+      deploy_on_push: true
+      repo: YOUR_GITHUB_USERNAME/RedLead
+
+    # Build configuration
+    build_command: npm run build
+
+    # Runtime configuration
+    run_command: npm start
+
+    # Health check
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 10
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 3
+
+    # Resource allocation
+    instance_size_slug: basic-xxs
+    instance_count: 1
+
+    # HTTP configuration
+    http_port: 8080
+
+    # Routes
+    routes:
+      - path: /
+
+    # Specify the working directory (root of repo)
+    source_dir: /
+
+# Alert policy (get notified of issues)
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
