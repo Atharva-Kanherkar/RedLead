@@ -163,8 +163,7 @@ app.listen(PORT, async () => {
   await initializeRedis();
 
   // Initialize background job scheduler
-  initializeScheduler();
-  log.info('Background job scheduler initialized');
+  await initializeScheduler();
 
   // Log cache status
   const cacheStats = await getCacheStats();

@@ -1,15 +1,48 @@
 import cron from 'node-cron';
+import { log } from '../lib/logger';
+import { isQueueAvailable } from '../lib/queue';
+import { scheduleRecurringJobs } from '../queues/jobs';
+
+// Import worker functions (used for cron fallback)
 import { runLeadDiscoveryWorker } from '../workers/lead.worker';
 import { runSubredditAnalysisWorker } from '../workers/subreddit.worker';
 import { findPendingRepliesWorker, trackPostedReplyPerformanceWorker } from '../workers/replyTracking.worker';
 import { runMarketInsightWorker } from '../workers/marketInsight.worker';
-import { expireUserTrials } from '../services/subscription.service'; // 👈 NEW: Import the trial expiration service
+import { expireUserTrials } from '../services/subscription.service';
 
 /**
- * Initializes and starts all scheduled background jobs for the application.
+ * Initializes and starts all scheduled background jobs.
+ *
+ * Strategy:
+ * - If Redis available: Use BullMQ queues (recommended)
+ * - If Redis not available: Use cron jobs (fallback)
+ *
+ * This ensures zero breaking changes - system works either way.
  */
-export const initializeScheduler = () => {
-    console.log('Scheduler is initializing...');
+export const initializeScheduler = async () => {
+    log.info('Initializing job scheduler...');
+
+    // Check if we should use queues or cron
+    const useQueues = isQueueAvailable() && process.env.USE_QUEUE !== 'false';
+
+    if (useQueues) {
+        log.info('Using BullMQ job queues (Redis available)');
+        await scheduleRecurringJobs();
+        log.info('✅ BullMQ job scheduler initialized');
+        log.info('   Note: Start worker process separately with: npm run worker');
+        return;
+    }
+
+    // Fallback to cron jobs if Redis not available
+    log.info('Using cron scheduler (Redis not available - fallback mode)');
+    initializeCronScheduler();
+    log.info('✅ Cron job scheduler initialized');
+};
+
+/**
+ * Legacy cron scheduler (fallback when Redis unavailable)
+ */
+const initializeCronScheduler = () => {
 
     // --- JOB 1: Lead Discovery Worker ---
     // Runs every 15 minutes.
@@ -72,5 +105,5 @@ export const initializeScheduler = () => {
     });
 
 
-    console.log('✅ Scheduler initialized with all jobs.');
+    log.info('Cron scheduler initialized with all jobs');
 };
