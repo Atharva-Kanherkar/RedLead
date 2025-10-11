@@ -9,17 +9,10 @@ build/
 .next/
 out/
 
-# Environment variables
+# Environment variables (ALL env files with secrets)
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Allow template files
+.env.*
 !.env.example
-!.env.development
-!.env.production
 
 # Logs
 logs/
