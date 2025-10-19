@@ -14,6 +14,7 @@ export const generalLimiter = rateLimit({
     },
     standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
     legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for CORS preflight requests
     handler: (req, res) => {
         console.warn(`[RATE LIMIT] IP ${req.ip} exceeded general rate limit`);
         res.status(429).json({
@@ -32,6 +33,7 @@ export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // Limit each IP to 5 requests per windowMs
     skipSuccessfulRequests: true, // Don't count successful requests
+    skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for CORS preflight requests
     message: {
         error: 'Too many authentication attempts, please try again later.',
         retryAfter: '15 minutes'
@@ -57,6 +59,7 @@ export const aiLimiter = rateLimit({
         error: 'Too many AI requests, please try again later.',
         retryAfter: '15 minutes'
     },
+    skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for CORS preflight requests
     handler: (req, res) => {
         console.warn(`[RATE LIMIT] IP ${req.ip} exceeded AI rate limit`);
         res.status(429).json({
@@ -78,6 +81,7 @@ export const webhookLimiter = rateLimit({
         error: 'Too many webhook requests, please try again later.',
         retryAfter: '1 minute'
     },
+    skip: (req) => req.method === 'OPTIONS', // Skip rate limiting for CORS preflight requests
     handler: (req, res) => {
         console.warn(`[RATE LIMIT] IP ${req.ip} exceeded webhook rate limit`);
         res.status(429).json({
