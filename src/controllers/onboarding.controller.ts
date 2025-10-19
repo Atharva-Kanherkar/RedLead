@@ -86,7 +86,32 @@ export const completeOnboarding: RequestHandler = async (req: any, res, next) =>
     }
 
     try {
-        console.log(`[Onboarding] Completing for user: ${userId}`);
+        log.info('[Onboarding] Completing for user', { userId });
+
+        // CRITICAL FIX: Ensure user exists in database (webhook might fail)
+        const existingUser = await prisma.user.findUnique({ where: { id: userId } });
+
+        if (!existingUser) {
+            log.warn('[Onboarding] User not found in database - creating now (webhook failed)', { userId });
+
+            // Create user with 7-day pro trial (same as webhook)
+            const trialEndsAt = new Date();
+            trialEndsAt.setDate(trialEndsAt.getDate() + 7);
+
+            await prisma.user.create({
+                data: {
+                    id: userId,
+                    email: req.auth.sessionClaims?.email as string || 'unknown@email.com',
+                    firstName: req.auth.sessionClaims?.firstName as string || '',
+                    lastName: req.auth.sessionClaims?.lastName as string || '',
+                    plan: 'pro',
+                    subscriptionStatus: 'active',
+                    subscriptionEndsAt: trialEndsAt
+                }
+            });
+
+            log.info('[Onboarding] User created successfully', { userId });
+        }
 
         // Generate subreddit suggestions. The AI service now returns a string array directly.
         const subredditArray = await generateSubredditSuggestions(generatedDescription);
