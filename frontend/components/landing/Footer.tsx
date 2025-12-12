@@ -215,7 +215,7 @@ const SimpleFooter: React.FC = () => {
           className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between"
         >
           <p className={`text-white/60 text-sm ${inter.className}`}>
-            © {currentYear} Redlead. Built by  <Link href={"https://x.com/attharrva15"}>@attharrva15</Link>
+            © {currentYear} Redlead. Built by  <Link href={"https://x.com/anurag"}>@anurag</Link>
           </p>
           
           {/* Social Links */}
